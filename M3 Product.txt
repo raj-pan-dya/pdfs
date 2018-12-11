@@ -1,0 +1,562 @@
+App.xaml
+<Application x:Class="ADONETDay1Demo.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ADONETDay1Demo"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>
+
+
+-----------------------------------------------------------------------------
+MainWindow.xaml
+<Window x:Class="ADONETDay1Demo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ADONETDay1Demo"
+        mc:Ignorable="d"
+        Title="Product Maintainance System" Height="400" Width="323" Loaded="Window_Loaded">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="3*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Project Maintainance System" Grid.Row="0" Grid.ColumnSpan="2" Margin="0" TextAlignment="Center" VerticalAlignment="Center" FontSize="18" FontWeight="Bold"/>
+        <TextBlock Text="Product Name" Grid.Row="1" Grid.Column="0" Margin="20,2,0,2" TextAlignment="Left" VerticalAlignment="Center"/>
+        <TextBlock Text="Price" Grid.Row="2" Grid.Column="0" Margin="20,2,0,2" TextAlignment="Left" VerticalAlignment="Center"/>
+        <TextBlock Text="Expiry Date" Grid.Row="3" Grid.Column="0" Margin="20,2,0,2" TextAlignment="Left" VerticalAlignment="Center"/>
+
+        <ComboBox Name="ComboName" Grid.Row="1" Grid.Column="1" Margin="5,2,10,2" Height="30" IsEditable="True">
+           
+        </ComboBox>
+
+        <TextBox Name="txtPrice" Grid.Row="2" Grid.Column="1" Margin="5,2,10,2" Height="30" Text="{Binding ElementName=ComboName, Path=SelectedItem.Price}"/>
+        <DatePicker Name="txtDate" Grid.Row="3" Grid.Column="1" Margin="5,2,10,2" Height="30" Text="{Binding ElementName=ComboName, Path=SelectedItem.ExpDate}"/>
+
+        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Background="Gray">
+            <Button Name="btnInsert" Width="93" Height="30" Margin="6,0,0,0" Content="Insert" Click="BtnInsert_Click"/>
+            <Button Name="btnUpdate" Width="93" Height="30" Margin="6,0,6,0" Content="Update" Click="BtnUpdate_Click"/>
+            <Button Name="btnDelete" Width="93" Height="30" Margin="0,0,6,0" Content="Delete" Click="BtnDelete_Click"/>
+        </StackPanel>
+
+        <DataGrid Name="dgProd"  Grid.Row="5" Grid.ColumnSpan="2" Height="120" Background="LightGray" />
+    </Grid>
+</Window>
+
+
+
+
+------------------------------------------------------------------------------------
+MainWindow.xaml.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace ADONETDay1Demo
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        ProductDAL dal = new ProductDAL();
+
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        public bool isInputValid()
+        {
+            bool isValid = true;
+
+            StringBuilder sb = new StringBuilder();
+
+            if (ComboName.Text == null | ComboName.Text == string.Empty | ComboName.Text.Length < 1)
+            {
+                sb.Append(Environment.NewLine + " Product Name is Neccessary!!");
+                isValid = false;
+            }
+            if (txtPrice.Text == null | txtPrice.Text == string.Empty | txtPrice.Text.Length < 1)
+            {
+                sb.Append(Environment.NewLine + "Product Price is Neccessary!!");
+                isValid = false;
+            }
+            if (txtDate.Text == null | txtDate.Text == string.Empty | txtDate.Text.Length < 1)
+            {
+                sb.Append(Environment.NewLine + "Expiry Date is Neccessary!!");
+                isValid = false;
+            }
+            if (isValid == false)
+            {
+                throw new UDException(sb.ToString());
+            }
+
+            return isValid;
+        }
+
+        public void PopulateUI()
+        {
+            IEnumerable<Product> prods = dal.SelectAll();
+            dgProd.ItemsSource = prods;
+            ComboName.ItemsSource = prods;
+            ComboName.DisplayMemberPath = "ProdName";
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            PopulateUI();
+        }
+
+
+        private void BtnInsert_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (isInputValid())
+                {
+                    Product p = new Product
+                    {
+                        ProdName = ComboName.Text,
+                        Price = Convert.ToDecimal(txtPrice.Text),
+                        ExpDate = Convert.ToDateTime(txtDate.Text)
+                    };
+                    dal.Insert(p);
+                    MessageBox.Show("Inserted!");
+                    PopulateUI();
+                }
+            }
+            catch (UDException ex1)
+            {
+                MessageBox.Show(ex1.Message);
+            }
+            catch (Exception ex2)
+            {
+                MessageBox.Show(ex2.Message);
+            }
+        }
+
+        private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Product prd = (Product)ComboName.SelectedItem;
+
+                prd.ExpDate = Convert.ToDateTime(txtDate.Text);
+                prd.Price = Convert.ToDecimal(txtPrice.Text);
+                prd.ProdName = ComboName.Text.ToString();
+                dal.Update(prd);
+                MessageBox.Show("Updated");
+                PopulateUI();
+            }
+            
+            catch (Exception ex2)
+            {
+                MessageBox.Show(ex2.Message);
+            }
+        }
+
+        private void BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            Product prd = (Product)ComboName.SelectedItem;
+            try
+            {
+               
+                dal.Delete(prd.Id);
+                MessageBox.Show("Deleted");
+                PopulateUI();
+            }
+
+            catch (Exception ex2)
+            {
+                MessageBox.Show(ex2.Message);
+            }
+
+        }
+
+        //private void ComboName_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    //Product p = (Product)ComboName.SelectedItem;
+
+        //    //MessageBox.Show(p.Id.ToString());
+        //}
+
+        
+    }
+}
+
+
+
+-----------------------------------------------------------
+Product.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ADONETDay1Demo
+{
+    public class Product
+    {
+        public int Id { get; set; }
+        public string ProdName { get; set; }
+        public decimal Price { get; set; }
+        public DateTime ExpDate { get; set; }
+    }
+}
+
+
+
+
+----------------------------------------------------------------------------
+ProductDAL.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data.SqlClient;
+using System.Configuration;
+using System.Runtime.Serialization;
+
+namespace ADONETDay1Demo
+{
+   public  class ProductDAL
+    {
+        SqlConnection cn = null;
+        SqlCommand cmd = null;
+        SqlDataReader dr = null;
+
+        public ProductDAL()
+        {
+            cn = new SqlConnection(ConfigurationManager.ConnectionStrings["cn1"].ConnectionString);
+
+        }
+
+        
+
+        public void Insert(Product product)
+        {
+            try
+            {
+                    //cmd = new SqlCommand("INSERT INTO [shariq].[Product] VALUES(@pName, @price,@eDate)", cn);
+                    cmd = new SqlCommand("shariq.USP_InsertProduct", cn);
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@pName", product.ProdName);
+                    cmd.Parameters.AddWithValue("@price", product.Price);
+                    cmd.Parameters.AddWithValue("@eDate", product.ExpDate);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                
+            }
+            catch (UDException)
+            {
+                throw;
+            }
+            catch (Exception ex2)
+            {
+                throw ex2;
+            }
+            finally
+            {
+                if(cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+
+        public void Update(Product product)
+        {
+            try
+            {
+                //cmd = new SqlCommand("update amol.Product set ProdName=@pName, Price=@price, ExpDate=@eDate where Id=@id", cn);
+                cmd = new SqlCommand("shariq.USP_UpdateProduct", cn);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@id", product.Id);
+                cmd.Parameters.AddWithValue("@pName", product.ProdName);
+                cmd.Parameters.AddWithValue("@price", product.Price);
+                cmd.Parameters.AddWithValue("@eDate", product.ExpDate);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+                
+            }
+           
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+        public void Delete(int id)
+        {
+            try
+            {
+                cmd = new SqlCommand("shariq.USP_DeleteProduct", cn);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@id",id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex3)
+            {
+                throw ex3;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+
+        public IEnumerable<Product> SelectAll()
+        {
+            List<Product> products = new List<Product>();
+            try
+            {
+                cmd = new SqlCommand("select * from shariq.Product", cn);
+                cn.Open();
+                dr = cmd.ExecuteReader();
+                if (dr.HasRows)
+                {
+                    while (dr.Read())
+                    {
+                        Product p = new Product();
+                        p.Id = Convert.ToInt32(dr[0]);
+                        p.ProdName = dr[1].ToString();
+                        p.Price = Convert.ToDecimal(dr[2]);
+                        p.ExpDate = Convert.ToDateTime(dr[3]);
+                        products.Add(p);
+                    }
+                }
+                dr.Close();
+            }
+            catch (Exception )
+            {
+                throw;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                {
+                    cn.Close();
+                }
+            }
+            return products;
+        }
+    }
+
+    [Serializable]
+    internal class UDException : Exception
+    {
+        public UDException()
+        {
+        }
+
+        public UDException(string message) : base(message)
+        {
+        }
+
+        public UDException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected UDException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
+    }
+
+
+}
+
+
+
+------------------------------------------------------------------------
+UDException
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data.SqlClient;
+using System.Configuration;
+using System.Runtime.Serialization;
+
+namespace ADONETDay1Demo
+{
+   public  class ProductDAL
+    {
+        SqlConnection cn = null;
+        SqlCommand cmd = null;
+        SqlDataReader dr = null;
+
+        public ProductDAL()
+        {
+            cn = new SqlConnection(ConfigurationManager.ConnectionStrings["cn1"].ConnectionString);
+
+        }
+
+        
+
+        public void Insert(Product product)
+        {
+            try
+            {
+                    //cmd = new SqlCommand("INSERT INTO [shariq].[Product] VALUES(@pName, @price,@eDate)", cn);
+                    cmd = new SqlCommand("shariq.USP_InsertProduct", cn);
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@pName", product.ProdName);
+                    cmd.Parameters.AddWithValue("@price", product.Price);
+                    cmd.Parameters.AddWithValue("@eDate", product.ExpDate);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                
+            }
+            catch (UDException)
+            {
+                throw;
+            }
+            catch (Exception ex2)
+            {
+                throw ex2;
+            }
+            finally
+            {
+                if(cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+
+        public void Update(Product product)
+        {
+            try
+            {
+                //cmd = new SqlCommand("update amol.Product set ProdName=@pName, Price=@price, ExpDate=@eDate where Id=@id", cn);
+                cmd = new SqlCommand("shariq.USP_UpdateProduct", cn);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@id", product.Id);
+                cmd.Parameters.AddWithValue("@pName", product.ProdName);
+                cmd.Parameters.AddWithValue("@price", product.Price);
+                cmd.Parameters.AddWithValue("@eDate", product.ExpDate);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+                
+            }
+           
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+        public void Delete(int id)
+        {
+            try
+            {
+                cmd = new SqlCommand("shariq.USP_DeleteProduct", cn);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@id",id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex3)
+            {
+                throw ex3;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                    cn.Close();
+            }
+        }
+
+        public IEnumerable<Product> SelectAll()
+        {
+            List<Product> products = new List<Product>();
+            try
+            {
+                cmd = new SqlCommand("select * from shariq.Product", cn);
+                cn.Open();
+                dr = cmd.ExecuteReader();
+                if (dr.HasRows)
+                {
+                    while (dr.Read())
+                    {
+                        Product p = new Product();
+                        p.Id = Convert.ToInt32(dr[0]);
+                        p.ProdName = dr[1].ToString();
+                        p.Price = Convert.ToDecimal(dr[2]);
+                        p.ExpDate = Convert.ToDateTime(dr[3]);
+                        products.Add(p);
+                    }
+                }
+                dr.Close();
+            }
+            catch (Exception )
+            {
+                throw;
+            }
+            finally
+            {
+                if (cn.State == System.Data.ConnectionState.Open)
+                {
+                    cn.Close();
+                }
+            }
+            return products;
+        }
+    }
+
+    [Serializable]
+    internal class UDException : Exception
+    {
+        public UDException()
+        {
+        }
+
+        public UDException(string message) : base(message)
+        {
+        }
+
+        public UDException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected UDException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
+    }
+
+
+}
